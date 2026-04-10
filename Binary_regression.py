@@ -3,7 +3,6 @@
 # Business Case: A leasing company wants to understand which companies
 # should be granted credit, considering macroeconomic outlook and firm features.
 # =============================================================================
-
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -20,37 +19,59 @@ PATH     = r"C:\Users\franc\Desktop\Data Analysis\DatabaseProposteFido_202602.xl
 PATH_OUT = r"C:\Users\franc\Desktop\Data Analysis\\"
 
 # =============================================================================
-# CARICAMENTO
+# DATA LOADING
 # =============================================================================
 
 df = pd.read_excel(PATH)
 df['target'] = (df['Esito_finale'].str.strip().str.upper() == 'SI').astype(int)
+# =============================================================================
+# DATA DICTIONARY PRINT
+# =============================================================================
+print("\n" + "=" * 75)
+print("DATA DICTIONARY (Italian to English Mapping for Reviewers)")
+print("-" * 75)
+
+data_dict = """
+  Esito_finale          -> Final Outcome (Target: YES/NO)
+  VALORE FIDO RICHIESTO -> Requested Credit Amount
+  Fascia Fido           -> Credit Bracket
+  FATTURATO             -> Revenue / Turnover
+  DIPENDENTI            -> Number of Employees
+  NUMERO_IMMOBILI       -> Number of Owned Properties
+  AFFIDATA              -> Already Granted Credit (Boolean)
+  REVISIONE             -> Under Review (Boolean)
+  NATURA_GIURIDICA      -> Legal Entity Type
+  STATO_ATTIVITA        -> Business Status (Active, Bankrupt, etc.)
+  DATA_CALCOLO          -> Calculation Date
+"""
+#Print the dictionary, removing leading and trailing newlines
+print(data_dict.strip('\n'))
+print("=" * 75 + "\n")
 
 # =============================================================================
-# STEP 0 — ESPLORAZIONE INIZIALE
+# STEP 0 — EXPLORATORY DATA ANALYSIS (EDA)
 # =============================================================================
-
 print("=" * 65)
-print("STEP 0.1 — CARICAMENTO")
+print("STEP 0.1 — DATA LOADING")
 print("=" * 65)
-print(f"  Righe   : {df.shape[0]:,}")
-print(f"  Colonne : {df.shape[1]}")
-print(f"  Memoria : {df.memory_usage(deep=True).sum()/1024:.1f} KB")
+print(f"  Rows   : {df.shape[0]:,}")
+print(f"  Columns : {df.shape[1]}")
+print(f"  Memory : {df.memory_usage(deep=True).sum()/1024:.1f} KB")
 
-# --- Tipologia variabili ---
+# --- Variable Types ---
 print("\n" + "=" * 65)
-print("STEP 0.2 — TIPOLOGIA DELLE VARIABILI")
+print("STEP 0.2 — VARIABLE TYPES")
 print("=" * 65)
 tipo_map = {
     'Target'          : ['Esito_finale'],
-    'Identificativi'  : ['ID', 'CCIAA_IMPRESA'],
-    'Score / Rischio' : ['SCORE_INNOLVA', 'CLASSE_SCORE_INNOLVA', 'SCORE_SONEPAR', 'ITP'],
-    'Finanziarie'     : ['VALORE FIDO RICHIESTO', 'Fascia Fido', 'FATTURATO',
+    'Identifiers'  : ['ID', 'CCIAA_IMPRESA'],
+    'Score / Risk' : ['SCORE_INNOLVA', 'CLASSE_SCORE_INNOLVA', 'SCORE_SONEPAR', 'ITP'],
+    'Financials'     : ['VALORE FIDO RICHIESTO', 'Fascia Fido', 'FATTURATO',
                          'DIPENDENTI', 'NUMERO_IMMOBILI', 'AFFIDATA', 'REVISIONE'],
-    'Anagrafiche'     : ['NATURA_GIURIDICA', 'STATO_ATTIVITA', 'BRAND_SONEPAR',
+    'Company Profile'     : ['NATURA_GIURIDICA', 'STATO_ATTIVITA', 'BRAND_SONEPAR',
                          'CODICE_ATECO', 'CODICE_ATECO_NP'],
-    'Date'            : ['DATA_CALCOLO', 'DATA_ISCRIZIONE', 'DATA_INZIO_ATTIVITA'],
-    'Macro (esterne)' : ["Aspettative Inflazione Italia a 12 mesi (fonte: Banca d'Italia)",
+    'Dates'            : ['DATA_CALCOLO', 'DATA_ISCRIZIONE', 'DATA_INZIO_ATTIVITA'],
+    'Macro (External)' : ["Aspettative Inflazione Italia a 12 mesi (fonte: Banca d'Italia)",
                          "Crescita attesa PIL Italia per l'anno 2024 (Fonte: ISTAT)"]
 }
 for cat, cols in tipo_map.items():
@@ -67,60 +88,60 @@ vc  = df['Esito_finale'].value_counts()
 pct = df['Esito_finale'].value_counts(normalize=True) * 100
 for val in vc.index:
     print(f"  {val:>5}  →  {vc[val]:>5} ({pct[val]:.1f}%)")
-print(f"\n  ⚠️  Sbilanciamento SI/NO = {vc['SI']/vc['NO']:.1f}x")
-print(f"      Richiede attenzione nella scelta soglia z e gestione unbalancing")
+print(f"\n  ⚠️  YES/NO Imbalance = {vc['SI']/vc['NO']:.1f}x")
+print(f"      Requires attention when choosing the z-threshold and handling imbalance")
 
 fig, axes = plt.subplots(1, 2, figsize=(10, 4))
-fig.suptitle("TARGET — Distribuzione Esito_finale", fontsize=13, fontweight='bold')
-axes[0].bar(['SI (1)', 'NO (0)'], [vc['SI'], vc['NO']],
+fig.suptitle("TARGET — Esito_finale Distribution", fontsize=13, fontweight='bold')
+axes[0].bar(['YES (1)', 'NO (0)'], [vc['SI'], vc['NO']],
             color=[PALETTE[0], PALETTE[1]], width=0.5)
-axes[0].set_title("Conteggio assoluto")
-axes[0].set_ylabel("N. osservazioni")
+axes[0].set_title("Absolute Count")
+axes[0].set_ylabel("N. observations")
 for i, v in enumerate([vc['SI'], vc['NO']]):
     axes[0].text(i, v+30, str(v), ha='center', fontweight='bold')
 axes[1].pie([vc['SI'], vc['NO']],
-            labels=[f"SI\n{pct['SI']:.1f}%", f"NO\n{pct['NO']:.1f}%"],
+            labels=[f"YES\n{pct['SI']:.1f}%", f"NO\n{pct['NO']:.1f}%"],
             colors=[PALETTE[0], PALETTE[1]], startangle=90,
             wedgeprops=dict(edgecolor='white', linewidth=2))
-axes[1].set_title("Proporzioni")
+axes[1].set_title("Proportions")
 plt.tight_layout()
 plt.savefig(PATH_OUT + "plot_target.png", dpi=150, bbox_inches='tight')
 plt.show()
-print("  ✅ Grafico salvato: plot_target.png")
+print("  ✅ Plot saved: plot_target.png")
 
-# --- Valori mancanti ---
+# --- Missing Values ---
 print("\n" + "=" * 65)
-print("STEP 0.4 — VALORI MANCANTI")
+print("STEP 0.4 — MISSING VALUES")
 print("=" * 65)
 miss    = df.isnull().sum()
 miss_pct = (miss / len(df)) * 100
 miss_df = pd.DataFrame({'Missing_N': miss, 'Missing_%': miss_pct.round(1)})
 miss_df = miss_df[miss_df['Missing_N'] > 0].sort_values('Missing_%', ascending=False)
 print(miss_df.to_string())
-print("\n  Commento diagnostico:")
+print("\n Diagnostic summary:")
 for col, row in miss_df.iterrows():
     p = row['Missing_%']
-    flag = "🔴 CRITICO" if p > 40 else ("🟡 ELEVATO" if p > 20 else "🟢 GESTIBILE")
+    flag = "🔴 CRITICAL" if p > 40 else ("🟡 HIGH" if p > 20 else "🟢 MANAGEABLE")
     print(f"    {col:<45} {p:>5.1f}%  {flag}")
 
 fig, ax = plt.subplots(figsize=(12, 4))
 sns.heatmap(df[miss_df.index.tolist()].isnull().astype(int).T,
             ax=ax, cbar=False, cmap=['#e8f5e9', '#F44336'],
             yticklabels=miss_df.index.tolist(), xticklabels=False)
-ax.set_title("Mappa valori mancanti (rosso = NaN)", fontsize=12, fontweight='bold')
-ax.set_xlabel("Osservazioni")
+ax.set_title("Missing values map (red = NaN)", fontsize=12, fontweight='bold')
+ax.set_xlabel("Observations")
 plt.tight_layout()
 plt.savefig(PATH_OUT + "plot_missing.png", dpi=150, bbox_inches='tight')
 plt.show()
-print("  ✅ Grafico salvato: plot_missing.png")
+print("  ✅ Plot saved: plot_missing.png")
 
 # --- Macro ---
 print("\n" + "=" * 65)
-print("STEP 0.5 — VARIABILI MACRO ESTERNE (costanti → eliminate dal modello)")
+print("STEP 0.5 — EXTERNAL MACRO VARIABLES (constants → dropped from the model)")
 print("=" * 65)
 col_inflaz = "Aspettative Inflazione Italia a 12 mesi (fonte: Banca d'Italia)"
 col_pil    = "Crescita attesa PIL Italia per l'anno 2024 (Fonte: ISTAT)"
-print(f"  Inflazione valori unici: {df[col_inflaz].nunique()} → {df[col_inflaz].unique()}")
+print(f"  Inflation unique values: {df[col_inflaz].nunique()} → {df[col_inflaz].unique()}")
 print(f"  PIL        valori unici: {df[col_pil].nunique()}    → costante")
 print("  ⚠️  Varianza = 0 → non identificabili nel modello → eliminate")
 print("  📌 Citate nella narrativa del report per contestualizzare il business case")
