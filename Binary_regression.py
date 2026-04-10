@@ -142,13 +142,13 @@ print("=" * 65)
 col_inflaz = "Aspettative Inflazione Italia a 12 mesi (fonte: Banca d'Italia)"
 col_pil    = "Crescita attesa PIL Italia per l'anno 2024 (Fonte: ISTAT)"
 print(f"  Inflation unique values: {df[col_inflaz].nunique()} → {df[col_inflaz].unique()}")
-print(f"  PIL        valori unici: {df[col_pil].nunique()}    → costante")
-print("  ⚠️  Varianza = 0 → non identificabili nel modello → eliminate")
-print("  📌 Citate nella narrativa del report per contestualizzare il business case")
+print(f"  GDP       unique values: {df[col_pil].nunique()}    → constant")
+print("  ⚠️  Variance = 0 → not identifiable in the model → dropped")
+print("  📌 Mentioned in the report narrative to contextualize the business case")
 
 # --- Descrittive numeriche raw ---
 print("\n" + "=" * 65)
-print("STEP 0.6 — STATISTICHE DESCRITTIVE NUMERICHE (variabili originali)")
+print("STEP 0.6 — NUMERICAL DESCRIPTIVE STATISTICS (original variables)")
 print("=" * 65)
 num_raw = ['SCORE_INNOLVA','ITP','FATTURATO','DIPENDENTI','NUMERO_IMMOBILI','VALORE FIDO RICHIESTO']
 desc_raw = df[num_raw].describe(percentiles=[.25,.5,.75,.90,.95]).T
@@ -156,11 +156,11 @@ desc_raw['skewness'] = df[num_raw].skew().round(2)
 desc_raw['kurtosis'] = df[num_raw].kurtosis().round(2)
 print(desc_raw[['count','mean','std','min','25%','50%','75%','90%','95%','max','skewness','kurtosis']].to_string())
 print("""
-  GUIDA: |skewness|>1 → molto asimmetrica 🔴 | kurtosis>3 → code pesanti ⚠️
+  GUIDE: |skewness|>1 → highly skewed 🔴 | kurtosis>3 → heavy tails ⚠️
 """)
 
 fig, axes = plt.subplots(2, 3, figsize=(15, 8))
-fig.suptitle("STEP 0.6 — Distribuzioni Variabili Numeriche (raw)", fontsize=13, fontweight='bold')
+fig.suptitle("STEP 0.6 — Numerical Variable Distributions (raw)", fontsize=13, fontweight='bold')
 axes = axes.flatten()
 for i, col in enumerate(num_raw):
     data = df[col].dropna()
@@ -168,36 +168,36 @@ for i, col in enumerate(num_raw):
     axes[i].axvline(data.median(), color=PALETTE[1], linestyle='--', linewidth=1.5,
                     label=f'Med: {data.median():,.0f}')
     axes[i].axvline(data.mean(),   color=PALETTE[2], linestyle='-',  linewidth=1.5,
-                    label=f'Mea: {data.mean():,.0f}')
+                    label=f'Mean: {data.mean():,.0f}')
     axes[i].set_title(col, fontsize=10)
     axes[i].legend(fontsize=8)
 plt.tight_layout()
 plt.savefig(PATH_OUT + "plot_distribuzioni_raw.png", dpi=150, bbox_inches='tight')
 plt.show()
-print("  ✅ Grafico salvato: plot_distribuzioni_raw.png")
+print("  ✅ Plot saved: plot_distribuzioni_raw.png")
 
-# --- Categoriali ---
+# --- Categorical Variables ---
 print("\n" + "=" * 65)
-print("STEP 0.7 — VARIABILI CATEGORIALI")
+print("STEP 0.7 — CATEGORICAL VARIABLES")
 print("=" * 65)
 
 cat_cols = ['CLASSE_SCORE_INNOLVA','SCORE_SONEPAR','NATURA_GIURIDICA','STATO_ATTIVITA','Fascia Fido']
 
 for col in cat_cols:
     vc2 = df[col].value_counts(dropna=False)
-    print(f"\n  [{col}]  ({vc2.shape[0]} categorie)")
+    print(f"\n  [{col}]  ({vc2.shape[0]} categories)")
     print(vc2.to_string())
 
 labels_cat = {
-    'CLASSE_SCORE_INNOLVA': 'Classe Score Innolva',
-    'SCORE_SONEPAR':        'Score Sonepar',
-    'NATURA_GIURIDICA':     'Natura Giuridica',
-    'STATO_ATTIVITA':       'Stato Attività',
-    'Fascia Fido':          'Fascia Fido'
+    'CLASSE_SCORE_INNOLVA': 'Innolva Score Class',
+    'SCORE_SONEPAR':        'Sonepar Score',
+    'NATURA_GIURIDICA':     'Legal Entity Type',
+    'STATO_ATTIVITA':       'Business Status',
+    'Fascia Fido':          'Credit Bracket'
 }
 
 fig, axes = plt.subplots(2, 3, figsize=(16, 10))
-fig.suptitle("Distribuzione Variabili Categoriali",
+fig.suptitle("Categorical Variable Distributions",
              fontsize=13, fontweight='bold')
 axes = axes.flatten()
 for i, col in enumerate(cat_cols):
@@ -205,7 +205,7 @@ for i, col in enumerate(cat_cols):
     axes[i].barh(vc3.index.astype(str)[::-1], vc3.values[::-1],
                  color=PALETTE[i % len(PALETTE)])
     axes[i].set_title(labels_cat.get(col, col), fontsize=10, fontweight='bold')
-    axes[i].set_xlabel("Conteggio")
+    axes[i].set_xlabel("Count")
     axes[i].set_xlim(0, vc3.values.max() * 1.12)
     for j, v in enumerate(vc3.values[::-1]):
         axes[i].text(v + vc3.values.max() * 0.01, j, str(v),
@@ -215,89 +215,89 @@ axes[5].axis('off')
 plt.tight_layout()
 plt.savefig(PATH_OUT + "plot_categoriali.png", dpi=150, bbox_inches='tight')
 plt.show()
-print("  ✅ Grafico salvato: plot_categoriali.png")
+print("  ✅ Plot saved: plot_categoriali.png")
 # =============================================================================
-# STEP 1 — FEATURE ENGINEERING E PREPROCESSING
+# STEP 1 — FEATURE ENGINEERING AND PREPROCESSING
 # =============================================================================
 
 print("\n" + "=" * 65)
-print("STEP 1 — FEATURE ENGINEERING E PREPROCESSING")
+print("STEP 1 — FEATURE ENGINEERING AND PREPROCESSING")
 print("=" * 65)
-print("  Filosofia: i missing non sono casuali → sono informazione")
-print("  Meglio un modello reale che risponde al business case")
-print("  che un modello perfetto statisticamente ma irreale")
+print("  Philosophy: missing values are not random → they are information")
+print("  Better a real-world model that answers the business case")
+print("  than a statistically perfect but unrealistic one")
 
 # --- 1.1 SCORE_INNOLVA = 1000 ---
-print("\nSTEP 1.1 — INDAGINE SCORE_INNOLVA = 1000")
+print("\nSTEP 1.1 — INVESTIGATING SCORE_INNOLVA = 1000")
 mask_1000   = df['SCORE_INNOLVA'] == 1000
 n_1000      = mask_1000.sum()
 n_normal    = (~mask_1000).sum()
 t_1000      = df[mask_1000]['target'].value_counts()
 t_norm      = df[~mask_1000]['target'].value_counts()
-print(f"  Record con score=1000   : {n_1000} ({n_1000/len(df)*100:.1f}%)")
-print(f"  Approvazione score=1000 : {t_1000.get(1,0)/n_1000*100:.1f}%  ← molto più bassa!")
-print(f"  Approvazione score<1000 : {t_norm.get(1,0)/n_normal*100:.1f}%")
-print(f"  Classe Innolva score=1000: {df[mask_1000]['CLASSE_SCORE_INNOLVA'].value_counts().to_dict()}")
+print(f"  Records with score=1000   : {n_1000} ({n_1000/len(df)*100:.1f}%)")
+print(f"  Approval rate score=1000: {t_1000.get(1,0)/n_1000*100:.1f}%  ← molto più bassa!")
+print(f"  Approval rate score<1000: {t_norm.get(1,0)/n_normal*100:.1f}%")
+print(f"  Innolva Class score=1000: {df[mask_1000]['CLASSE_SCORE_INNOLVA'].value_counts().to_dict()}")
 print(f"  STATO_ATTIVITA score=1000: {df[mask_1000]['STATO_ATTIVITA'].value_counts().to_dict()}")
-print("  → DECISIONE: è un valore sentinella → flag_score_nd=1 + NaN nello score")
+print("  → DECISION: it is a sentinel value → flag_score_nd=1 + NaN in score")
 
 df['flag_score_nd'] = (df['SCORE_INNOLVA'] == 1000).astype(int)
 df.loc[df['SCORE_INNOLVA'] == 1000, 'SCORE_INNOLVA'] = np.nan
 
 # --- 1.2 ITP ---
-print("\nSTEP 1.2 — ITP: pulizia sentinella -999 e flag missing")
+print("\nSTEP 1.2 — ITP: cleaning -999 sentinel and missing flag")
 n_999 = (df['ITP'] == -999).sum()
-print(f"  ITP = -999 (sentinella): {n_999} record → sostituiti con NaN")
+print(f"  ITP = -999 (sentinel): {n_999} records → replaced with NaN")
 df.loc[df['ITP'] == -999, 'ITP'] = np.nan
 df['flag_itp'] = df['ITP'].notna().astype(int)
 appr_itp = df.groupby('flag_itp')['target'].mean()
-print(f"  flag_itp=0 (sconosciuto): {(df['flag_itp']==0).sum():,}  approv: {appr_itp[0]:.1%}")
-print(f"  flag_itp=1 (disponibile): {df['flag_itp'].sum():,}  approv: {appr_itp[1]:.1%}")
-print("  → NON imputiamo: missing = azienda sconosciuta = informazione di rischio")
+print(f"  flag_itp=0 (unknown): {(df['flag_itp']==0).sum():,}  approv: {appr_itp[0]:.1%}")
+print(f"  flag_itp=1 (available): {df['flag_itp'].sum():,}  approv: {appr_itp[1]:.1%}")
+print("  → DO NOT impute: missing = unknown company = risk information")
 
 # --- 1.3 FATTURATO ---
-print("\nSTEP 1.3 — FATTURATO: flag + log (no imputazione)")
+print("\nSTEP 1.3 — FATTURATO: flag + log (no imputation)")
 df['flag_fatturato'] = df['FATTURATO'].notna().astype(int)
 df['log_fatturato']  = np.where(
     df['FATTURATO'].notna() & (df['FATTURATO'] > 0),
     np.log1p(df['FATTURATO']), np.nan)
 appr_fatt = df.groupby('flag_fatturato')['target'].mean()
-print(f"  flag_fatturato=0 (mancante) : {(df['flag_fatturato']==0).sum():,}  approv: {appr_fatt[0]:.1%}")
-print(f"  flag_fatturato=1 (presente) : {df['flag_fatturato'].sum():,}  approv: {appr_fatt[1]:.1%}")
-print("  → NON imputiamo (41% missing): 2408 valori finti = rumore puro")
-print("  → flag cattura opacità finanziaria, log il valore dove disponibile")
+print(f"  flag_fatturato=0 (missing) : {(df['flag_fatturato']==0).sum():,}  approv: {appr_fatt[0]:.1%}")
+print(f"  flag_fatturato=1 (present) : {df['flag_fatturato'].sum():,}  approv: {appr_fatt[1]:.1%}")
+print("  → DO NOT impute (41% missing): 2408 fake values = pure noise")
+print("  → flag captures financial opacity, log the value where available")
 
-# --- 1.4 Log trasformazioni ---
-print("\nSTEP 1.4 — LOG TRASFORMAZIONI (variabili con skewness estrema)")
+# --- 1.4 Log Transformations ---
+print("\nSTEP 1.4 — LOG TRANSFORMATIONS (variables with extreme skewness)")
 df['log_dipendenti'] = np.log1p(df['DIPENDENTI'])
 df['log_immobili']   = np.log1p(df['NUMERO_IMMOBILI'])
 for orig, trasf in [('DIPENDENTI','log_dipendenti'),('NUMERO_IMMOBILI','log_immobili')]:
     print(f"  {orig:<20} skew prima: {df[orig].skew():>7.2f}  →  dopo log: {df[trasf].skew():.2f}")
 
-# --- 1.5 Encoding CLASSE_SCORE_INNOLVA ordinale ---
-print("\nSTEP 1.5 — ENCODING CLASSE_SCORE_INNOLVA (ordinale, 0=ND → 9=AAA)")
+# --- 1.5 Ordinal Encoding of CLASSE_SCORE_INNOLVA ---
+print("\nSTEP 1.5 — ENCODING CLASSE_SCORE_INNOLVA (ordinal, 0=ND → 9=AAA)")
 classe_order = {'AAA':9,'AA':8,'A':7,'BBB':6,'BB':5,'B':4,'CCC':3,'CC':2,'C':1,'ND':0}
 df['score_innolva_ord'] = df['CLASSE_SCORE_INNOLVA'].map(classe_order)
 for k, v in classe_order.items():
     n  = (df['CLASSE_SCORE_INNOLVA'] == k).sum()
     tr = df[df['CLASSE_SCORE_INNOLVA'] == k]['target'].mean()
     print(f"  {k:<5} → {v}  (n={n:>4}, approv={tr:.1%})")
-print("  → Encoding ordinale: 1 solo beta interpretabile (migliora classe → +prob. approv.)")
+print("  → Ordinal encoding: only 1 interpretable beta (better class → +prob. approval)")
 
-# --- 1.6 Encoding SCORE_SONEPAR (rank empirico dai dati) ---
-print("\nSTEP 1.6 — ENCODING SCORE_SONEPAR (rank empirico dal tasso approvazione)")
+# --- 1.6 Encoding SCORE_SONEPAR (empirical rank from data) ---
+print("\nSTEP 1.6 — SCORE_SONEPAR ENCODING (empirical rank from approval rate)")
 tasso_sonepar = df.groupby('SCORE_SONEPAR')['target'].mean().sort_values()
 rank_sonepar = tasso_sonepar.rank(method='dense').astype(int)
 df['score_sonepar_ord'] = df['SCORE_SONEPAR'].map(rank_sonepar)
 print(df.groupby('score_sonepar_ord').agg(
-    categoria=('SCORE_SONEPAR', 'first'),
+    category=('SCORE_SONEPAR', 'first'),
     n=('target','count'),
     approv=('target','mean')
 ).sort_values('score_sonepar_ord')
 .assign(approv=lambda x: x['approv'].apply(lambda v: f"{v:.1%}")))
 
-# --- 1.7 Feature engineering date ---
-print("\nSTEP 1.7 — FEATURE ENGINEERING DATE (anzianità)")
+# --- 1.7 Date Feature Engineering ---
+print("\nSTEP 1.7 — DATE FEATURE ENGINEERING (seniority/tenure)")
 def parse_date_int(s):
     return pd.to_datetime(s.astype(str).str.split('.').str[0], format='%Y%m%d', errors='coerce')
 df['data_calcolo_dt']    = parse_date_int(df['DATA_CALCOLO'])
@@ -305,27 +305,27 @@ df['data_iscrizione_dt'] = parse_date_int(df['DATA_ISCRIZIONE'])
 df['data_inizio_dt']     = parse_date_int(df['DATA_INZIO_ATTIVITA'])
 df['anzianita_azienda_anni'] = (df['data_calcolo_dt'] - df['data_inizio_dt']).dt.days / 365.25
 df['anzianita_cliente_anni'] = (df['data_calcolo_dt'] - df['data_iscrizione_dt']).dt.days / 365.25
-print(f"  anzianita_azienda  media: {df['anzianita_azienda_anni'].mean():.1f} anni  missing: {df['anzianita_azienda_anni'].isna().sum()}")
-print(f"  anzianita_cliente  media: {df['anzianita_cliente_anni'].mean():.1f} anni  missing: {df['anzianita_cliente_anni'].isna().sum()}")
+print(f"  Company age    mean: {df['anzianita_azienda_anni'].mean():.1f} years  missing: {df['anzianita_azienda_anni'].isna().sum()}")
+print(f"  Client tenure  mean: {df['anzianita_cliente_anni'].mean():.1f} years  missing: {df['anzianita_cliente_anni'].isna().sum()}")
 
-# --- 1.8 Categoriali anagrafiche ---
-print("\nSTEP 1.8 — ENCODING CATEGORIALI ANAGRAFICHE")
+# --- 1.8 Company Profile Categoricals ---
+print("\nSTEP 1.8 — COMPANY PROFILE CATEGORICAL ENCODING")
 df['azienda_attiva'] = (df['STATO_ATTIVITA'] == 'A').astype(int)
 appr_att = df.groupby('azienda_attiva')['target'].mean()
-print(f"  azienda_attiva=0 (non attiva): {(df['azienda_attiva']==0).sum():,}  approv: {appr_att[0]:.1%}")
-print(f"  azienda_attiva=1 (attiva)    : {df['azienda_attiva'].sum():,}  approv: {appr_att[1]:.1%}")
-print("  → Differenza ~28pp: fortissimo discriminante per il credito")
+print(f"  azienda_attiva=0 (inactive): {(df['azienda_attiva']==0).sum():,}  approval: {appr_att[0]:.1%}")
+print(f"  azienda_attiva=1 (active)    : {df['azienda_attiva'].sum():,}  approval: {appr_att[1]:.1%}")
+print("  → Difference ~28pp: very strong credit discriminator")
 
 top5_natura = df['NATURA_GIURIDICA'].value_counts().nlargest(5).index.tolist()
 df['natura_giuridica_clean'] = df['NATURA_GIURIDICA'].apply(
-    lambda x: x if x in top5_natura else 'Altro')
-print(f"\n  NATURA_GIURIDICA → top5 + Altro:")
+    lambda x: x if x in top5_natura else 'Other')
+print(f"\n  NATURA_GIURIDICA → top5 + Other:")
 print(df.groupby('natura_giuridica_clean').agg(
     n=('target','count'), approv=('target','mean')
 ).assign(approv=lambda x: x['approv'].apply(lambda v: f"{v:.1%}")).to_string())
 
-# --- 1.9 Dataset finale ---
-print("\nSTEP 1.9 — DATASET FINALE")
+# --- 1.9 Final Dataset ---
+print("\nSTEP 1.9 — FINAL DATASET")
 features_finali = [
     'SCORE_INNOLVA','flag_score_nd',
     'score_innolva_ord','score_sonepar_ord',
@@ -339,60 +339,72 @@ features_finali = [
     'target'
 ]
 df_model = df[features_finali].copy()
-print(f"  Righe    : {df_model.shape[0]:,}")
+print(f"  Rows    : {df_model.shape[0]:,}")
 print(f"  Features : {df_model.shape[1]-1} + 1 target")
-print("  Missing residui:")
+print("  Remaining missing values:")
 miss_res = df_model.isnull().sum()
 print(miss_res[miss_res > 0].to_string())
 
-# --- 1.10 Analisi bivariata ---
+# --- 1.10 Bivariate Analysis ---
 fig, axes = plt.subplots(2, 3, figsize=(16, 10))
-fig.suptitle("Tasso di Approvazione per Feature — Analisi Bivariata",
+fig.suptitle("Approval Rate by Feature — Bivariate Analysis",
              fontsize=13, fontweight='bold')
 axes = axes.flatten()
+
+# 1. Innolva Score
 gr1 = df.groupby('score_innolva_ord')['target'].mean().reset_index()
 axes[0].bar(gr1['score_innolva_ord'], gr1['target']*100, color=PALETTE[0])
-axes[0].set_title("Approvazione per Classe Innolva")
-axes[0].set_xlabel("Score ordinale (0=ND, 9=AAA)")
+axes[0].set_title("Approval by Innolva Class")
+axes[0].set_xlabel("Ordinal Score (0=ND, 9=AAA)")
 axes[0].axhline(df['target'].mean()*100, color='red', linestyle='--', alpha=0.7)
+
+# 2. ITP Flag
 gr2 = df.groupby('flag_itp')['target'].mean().reset_index()
-bars2 = axes[1].bar(['ITP mancante','ITP disponibile'], gr2['target']*100,
+bars2 = axes[1].bar(['Missing ITP','Available ITP'], gr2['target']*100,
                     color=[PALETTE[1], PALETTE[2]])
 axes[1].set_title("Approvazione per flag_itp")
 axes[1].axhline(df['target'].mean()*100, color='red', linestyle='--', alpha=0.7)
 for bar, val in zip(bars2, gr2['target']*100):
     axes[1].text(bar.get_x()+bar.get_width()/2, val+0.5, f'{val:.1f}%', ha='center', fontweight='bold')
+
+# 3. Revenue Flag
 gr3 = df.groupby('flag_fatturato')['target'].mean().reset_index()
-bars3 = axes[2].bar(['Fatturato mancante','Fatturato presente'], gr3['target']*100,
+bars3 = axes[2].bar(['Missing Revenue','Present Revenue'], gr3['target']*100,
                     color=[PALETTE[1], PALETTE[2]])
-axes[2].set_title("Approvazione per flag_fatturato")
+axes[2].set_title("Approval by flag_fatturato")
 axes[2].axhline(df['target'].mean()*100, color='red', linestyle='--', alpha=0.7)
 for bar, val in zip(bars3, gr3['target']*100):
     axes[2].text(bar.get_x()+bar.get_width()/2, val+0.5, f'{val:.1f}%', ha='center', fontweight='bold')
+
+# 4. Activity Status
 gr4 = df.groupby('azienda_attiva')['target'].mean().reset_index()
-bars4 = axes[3].bar(['Non attiva','Attiva'], gr4['target']*100,
+bars4 = axes[3].bar(['Inactive','Active'], gr4['target']*100,
                     color=[PALETTE[1], PALETTE[2]])
-axes[3].set_title("Approvazione per Stato Attività")
+axes[3].set_title("Approval by Business Status")
 axes[3].axhline(df['target'].mean()*100, color='red', linestyle='--', alpha=0.7)
 for bar, val in zip(bars4, gr4['target']*100):
     axes[3].text(bar.get_x()+bar.get_width()/2, val+0.5, f'{val:.1f}%', ha='center', fontweight='bold')
+
+# 5. Legal Entity Type
 gr5 = df.groupby('natura_giuridica_clean')['target'].mean().sort_values()
 axes[4].barh(gr5.index, gr5.values*100, color=PALETTE[4])
-axes[4].set_title("Approvazione per Natura Giuridica")
+axes[4].set_title("Approval by Legal Entity Type")
 axes[4].axvline(df['target'].mean()*100, color='red', linestyle='--', alpha=0.7)
+
+# 6. Sonepar Score
 gr6 = df.groupby('score_sonepar_ord')['target'].mean().reset_index()
 axes[5].bar(gr6['score_sonepar_ord'], gr6['target']*100, color=PALETTE[3])
-axes[5].set_title("Approvazione per Score Sonepar")
-axes[5].set_xlabel("Score ordinale")
+axes[5].set_title("Approval by Sonepar Score")
+axes[5].set_xlabel("Ordinal Score")
 axes[5].axhline(df['target'].mean()*100, color='red', linestyle='--', alpha=0.7)
 plt.tight_layout()
 plt.savefig(PATH_OUT + "plot_bivariata_approvazione.png", dpi=150, bbox_inches='tight')
 plt.show()
-print("  ✅ Grafico salvato: plot_bivariata_approvazione.png")
+print("  ✅ Plot saved: plot_bivariata_approvazione.png")
 
-# Salvataggio intermedio
-df_model.to_csv(PATH_OUT + "dataset_preprocessato.csv", index=False)
-print("  ✅ dataset_preprocessato.csv salvato")
+# Intermediate Saving
+df_model.to_csv(PATH_OUT + "preprocessed_dataset.csv", index=False)
+print("  ✅ preprocessed_dataset.csv salvato")
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -405,7 +417,7 @@ PALETTE = ['#2196F3', '#F44336', '#4CAF50', '#FF9800', '#9C27B0']
 PATH     = r"C:\Users\franc\Desktop\Data Analysis\DatabaseProposteFido_202602.xlsx"
 PATH_OUT = r"C:\Users\franc\Desktop\Data Analysis\\"
 
-# Ricostruzione rapida dataset
+# Quick dataset reconstruction
 df = pd.read_excel(PATH)
 df['target'] = (df['Esito_finale'].str.strip().str.upper() == 'SI').astype(int)
 
@@ -426,75 +438,75 @@ df['azienda_attiva'] = (df['STATO_ATTIVITA'] == 'A').astype(int)
 media_target = df['target'].mean() * 100
 
 fig, axes = plt.subplots(1, 4, figsize=(22, 5))
-fig.suptitle("Tasso di Approvazione per Feature — Analisi Bivariata",
+fig.suptitle("Approval Rate by Feature — Bivariate Analysis",
              fontsize=13, fontweight='bold')
 
-# --- 1. Classe Innolva ---
+# --- 1. Innolva Class ---
 gr1 = df.groupby('score_innolva_ord')['target'].mean().reset_index()
 axes[0].bar(gr1['score_innolva_ord'], gr1['target']*100,
             color=PALETTE[0], width=0.7)
 axes[0].axhline(media_target, color='red', linestyle='--',
                 linewidth=1.5, alpha=0.7)
-axes[0].set_title("Approvazione per Classe Innolva", fontsize=10, fontweight='bold')
-axes[0].set_xlabel("Score ordinale (0=ND, 9=AAA)")
-axes[0].set_ylabel("Tasso di approvazione (%)")
+axes[0].set_title("Approval by Innolva Class", fontsize=10, fontweight='bold')
+axes[0].set_xlabel("Ordinal Score (0=ND, 9=AAA)")
+axes[0].set_ylabel("Approval Rate (%)")
 axes[0].set_ylim(0, 105)
 for _, row in gr1.iterrows():
     axes[0].text(row['score_innolva_ord'], row['target']*100 + 1.5,
                  f"{row['target']*100:.0f}%",
                  ha='center', fontsize=7.5, fontweight='bold')
 
-# --- 2. Stato Attività ---
+# --- 2. Business Status ---
 gr2 = df.groupby('azienda_attiva')['target'].mean().reset_index()
 bars2 = axes[1].bar(['Non attiva', 'Attiva'], gr2['target']*100,
                     color=[PALETTE[1], PALETTE[2]], width=0.5)
 axes[1].axhline(media_target, color='red', linestyle='--',
                 linewidth=1.5, alpha=0.7)
-axes[1].set_title("Approvazione per Stato Attività", fontsize=10, fontweight='bold')
-axes[1].set_ylabel("Tasso di approvazione (%)")
+axes[1].set_title("Approval by Business Status", fontsize=10, fontweight='bold')
+axes[1].set_ylabel("Approval Rate (%)")
 axes[1].set_ylim(0, 105)
 for bar, val in zip(bars2, gr2['target']*100):
     axes[1].text(bar.get_x() + bar.get_width()/2, val + 1.5,
                  f"{val:.1f}%", ha='center', fontsize=10, fontweight='bold')
 
-# --- 3. Flag ITP ---
+# --- 3. ITP Flag ---
 gr3 = df.groupby('flag_itp')['target'].mean().reset_index()
-bars3 = axes[2].bar(['ITP mancante', 'ITP disponibile'], gr3['target']*100,
+bars3 = axes[2].bar(['Missing ITP', 'Available ITP'], gr3['target']*100,
                     color=[PALETTE[1], PALETTE[2]], width=0.5)
 axes[2].axhline(media_target, color='red', linestyle='--',
                 linewidth=1.5, alpha=0.7)
-axes[2].set_title("Approvazione per disponibilità ITP", fontsize=10, fontweight='bold')
-axes[2].set_ylabel("Tasso di approvazione (%)")
+axes[2].set_title("Approval by ITP Availability", fontsize=10, fontweight='bold')
+axes[2].set_ylabel("Approval Rate (%)")
 axes[2].set_ylim(0, 105)
 for bar, val in zip(bars3, gr3['target']*100):
     axes[2].text(bar.get_x() + bar.get_width()/2, val + 1.5,
                  f"{val:.1f}%", ha='center', fontsize=10, fontweight='bold')
 
-# --- 4. Score Sonepar ---
+# --- 4. Sonepar Score ---
 gr4 = df.groupby('score_sonepar_ord')['target'].mean().reset_index()
 axes[3].bar(gr4['score_sonepar_ord'], gr4['target']*100,
             color=PALETTE[3], width=0.7)
 axes[3].axhline(media_target, color='red', linestyle='--',
                 linewidth=1.5, alpha=0.7)
-axes[3].set_title("Approvazione per Score Sonepar", fontsize=10, fontweight='bold')
-axes[3].set_xlabel("Score ordinale (1=peggiore, 18=migliore)")
-axes[3].set_ylabel("Tasso di approvazione (%)")
+axes[3].set_title("Approval by Sonepar Score", fontsize=10, fontweight='bold')
+axes[3].set_xlabel("Ordinal Score (1=peggiore, 18=migliore)")
+axes[3].set_ylabel("Approval Rate (%)")
 axes[3].set_ylim(0, 105)
 
 plt.tight_layout()
-plt.savefig(PATH_OUT + "plot_bivariata_selezione.png", dpi=150, bbox_inches='tight')
+plt.savefig(PATH_OUT + "plot_bivariate_selection.png", dpi=150, bbox_inches='tight')
 plt.show()
-print("  ✅ Grafico salvato: plot_bivariata_selezione.png")
+print("  ✅ Plot saved: plot_bivariate_selection.png")
 # =============================================================================
-# STEP 1B — ANALISI DISTRIBUZIONI FEATURES FINALI
-# (prima di stimare il modello: skewness, kurtosis, outlier, correlazione)
+# STEP 1B — DISTRIBUTION ANALYSIS OF FINAL FEATURES
+# (pre-model estimation: skewness, kurtosis, outliers, correlation)
 # =============================================================================
 
 print("\n" + "=" * 65)
-print("STEP 1B — ANALISI DISTRIBUZIONI FEATURES FINALI POST-PREPROCESSING")
+print("STEP 1B — FINAL FEATURES DISTRIBUTION ANALYSIS POST-PREPROCESSING")
 print("=" * 65)
-print("  Obiettivo: capire la forma delle distribuzioni delle features")
-print("  ingegnerizzate prima di procedere con la stima del Logit")
+print("  Purpose: understand the distribution shape of the")
+print("  engineered features before proceeding with Logit estimation")
 
 num_continue = ['SCORE_INNOLVA','ITP','log_fatturato',
                 'log_dipendenti','log_immobili',
